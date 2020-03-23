@@ -112,6 +112,12 @@
   "bitfinex-api-secret": "",
   "bitfinex-api-key": "",
 
+  // bybit configuration
+  "bybit-url": "wss://stream-testnet.bybit.com/realtime",
+  "bybit-api-key": "",
+  "bybit-api-secret": "",
+
+
   // Required to access data from Quandl
   // To get your access token go to https://www.quandl.com/account/api
   "quandl-auth-token": "",

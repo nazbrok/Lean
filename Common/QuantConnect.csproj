@@ -231,6 +231,7 @@
     <Compile Include="Brokerages\AlphaStreamsBrokerageModel.cs" />
     <Compile Include="Brokerages\BrokerageFactoryAttribute.cs" />
     <Compile Include="Brokerages\BrokerageName.cs" />
+    <Compile Include="Brokerages\BybitBrokerageModel.cs" />
     <Compile Include="Brokerages\DefaultBrokerageMessageHandler.cs" />
     <Compile Include="Brokerages\DefaultBrokerageModel.cs" />
     <Compile Include="Brokerages\DowngradeErrorCodeToWarningBrokerageMessageHandler.cs" />
@@ -332,7 +333,9 @@
     <Compile Include="IsolatorLimitResult.cs" />
     <Compile Include="IsolatorLimitResultProvider.cs" />
     <Compile Include="ITimeProvider.cs" />
+    <Compile Include="Orders\BybitOrderProperties.cs" />
     <Compile Include="Orders\Fees\AlphaStreamsFeeModel.cs" />
+    <Compile Include="Orders\Fees\BybitFeeModel.cs" />
     <Compile Include="Orders\Fills\Fill.cs" />
     <Compile Include="Orders\Fills\FillModelParameters.cs" />
     <Compile Include="Orders\Fees\FeeModel.cs" />
