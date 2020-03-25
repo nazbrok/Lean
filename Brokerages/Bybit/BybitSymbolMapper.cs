@@ -46,7 +46,7 @@ namespace QuantConnect.Brokerages.Bybit
         /// </summary>
         public static readonly HashSet<string> KnownSymbolStrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "BTCUSD","ETHUSD","EOSUSD","XRPUSD" 
+            "BTCUSD","ETHUSD","EOSUSD","XRPUSD"
         };
 
         /// <summary>
@@ -187,7 +187,7 @@ namespace QuantConnect.Brokerages.Bybit
         /// <returns>True if Bybit supports the symbol</returns>
         public bool IsKnownLeanSymbol(Symbol symbol)
         {
-            if (string.IsNullOrWhiteSpace(symbol?.Value) || symbol.Value.Length <= 3)
+            if (string.IsNullOrWhiteSpace(symbol?.Value) || symbol?.Value.Length <= 3)
                 return false;
 
             var bybitSymbol = ConvertLeanSymbolToBybitSymbol(symbol.Value);

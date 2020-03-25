@@ -1,7 +1,7 @@
 ﻿using QuantConnect.Configuration;
 using QuantConnect.Interfaces;
-using QuantConnect.Packets;
 using QuantConnect.Securities;
+using QuantConnect.Util;
 using System;
 using System.Collections.Generic;
 
@@ -24,9 +24,34 @@ namespace QuantConnect.Brokerages.Bybit
             { "bybit-api-secret", Config.Get("bybit-api-secret")}
         };
 
-        public override IBrokerage CreateBrokerage(LiveNodePacket job, IAlgorithm algorithm)
+        /// <summary>
+        /// Create the Brokerage instance
+        /// </summary>
+        /// <param name="job"></param>
+        /// <param name="algorithm"></param>
+        /// <returns></returns>
+        public override IBrokerage CreateBrokerage(Packets.LiveNodePacket job, IAlgorithm algorithm)
         {
-            throw new NotImplementedException();
+            var required = new[] { "bybit-rest", "bybit-wss", "bybit-api-secret", "bybit-api-key" };
+
+            foreach (var item in required)
+            {
+                if (string.IsNullOrEmpty(job.BrokerageData[item]))
+                    throw new Exception($"BybitBrokerageFactory.CreateBrokerage: Missing {item} in config.json");
+            }
+
+            var priceProvider = new ApiPriceProvider(job.UserId, job.UserToken);
+
+            var brokerage = new BybitBrokerage(
+                job.BrokerageData["bybit-wss"],
+                job.BrokerageData["bybit-rest"],
+                job.BrokerageData["bybit-api-key"],
+                job.BrokerageData["bybit-api-secret"],
+                algorithm,
+                priceProvider);
+            Composer.Instance.AddPart<IDataQueueHandler>(brokerage);
+
+            return brokerage;
         }
 
         /// <summary>
@@ -34,7 +59,7 @@ namespace QuantConnect.Brokerages.Bybit
         /// </summary>
         public override void Dispose()
         {
-            
+
         }
 
         public override IBrokerageModel GetBrokerageModel(IOrderProvider orderProvider) => new BybitBrokerageModel();

@@ -22,12 +22,23 @@ namespace QuantConnect.Brokerages
         };
 
         /// <summary>
+        /// Gets a map of the default markets to be used for each security type
+        /// </summary>
+        public override IReadOnlyDictionary<SecurityType, string> DefaultMarkets { get; } = GetDefaultMarkets();
+
+
+        /// <summary>
         /// Bybit global leverage rule
         /// </summary>
         /// <param name="security"></param>
         /// <returns></returns>
         public override decimal GetLeverage(Security security)
         {
+            if (security == null)
+            {
+                throw new ArgumentNullException(nameof(security));
+            }
+
             if (security.Type == SecurityType.Crypto)
             {
                 decimal leverage;
