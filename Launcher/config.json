@@ -9,7 +9,7 @@
   "environment": "live-bybit", // "live-paper", "backtesting", "live-interactive", "live-interactive-iqfeed"
 
   // algorithm class selector
-  "algorithm-type-name": "BasicTemplateFrameworkAlgorithm",
+  "algorithm-type-name": "CryptoAlgorithm",
 
   // Algorithm language selector - options CSharp, FSharp, VisualBasic, Python, Java
   "algorithm-language": "CSharp",
@@ -113,9 +113,9 @@
   "bitfinex-api-key": "",
 
   // bybit configuration
-  "bybit-url": "wss://stream-testnet.bybit.com/realtime",
-  "bybit-api-key": "",
-  "bybit-api-secret": "",
+  "bybit-wss": "wss://stream-testnet.bybit.com/realtime",
+  "bybit-api-key": "6LFdnZFpN025Jf0ds5",
+  "bybit-api-secret": "XhH28EedWImOn11JbwVDkj9HoUPNDuHnSo9b",
 
 
   // Required to access data from Quandl

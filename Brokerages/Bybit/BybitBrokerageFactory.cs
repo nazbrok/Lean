@@ -19,7 +19,7 @@ namespace QuantConnect.Brokerages.Bybit
         public override Dictionary<string, string> BrokerageData => new Dictionary<string, string>
         {
             { "bybit-rest" , Config.Get("bybit-rest", "https://api.bybit.com")},
-            { "bybit-url" , Config.Get("bybit-url", "wss://stream.bybit.com/realtime")},
+            { "bybit-wss" , Config.Get("bybit-wss", "wss://stream.bybit.com/realtime")},
             { "bybit-api-key", Config.Get("bybit-api-key")},
             { "bybit-api-secret", Config.Get("bybit-api-secret")}
         };
@@ -36,7 +36,7 @@ namespace QuantConnect.Brokerages.Bybit
 
             foreach (var item in required)
             {
-                if (string.IsNullOrEmpty(job.BrokerageData[item]))
+                if (!job.BrokerageData.ContainsKey(item) || string.IsNullOrEmpty(job.BrokerageData[item]))
                     throw new Exception($"BybitBrokerageFactory.CreateBrokerage: Missing {item} in config.json");
             }
 

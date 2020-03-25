@@ -26,6 +26,10 @@ namespace QuantConnect.Brokerages
         /// </summary>
         public override IReadOnlyDictionary<SecurityType, string> DefaultMarkets { get; } = GetDefaultMarkets();
 
+        public BybitBrokerageModel(AccountType accountType = AccountType.Margin)
+            : base(accountType)
+        {
+        }
 
         /// <summary>
         /// Bybit global leverage rule

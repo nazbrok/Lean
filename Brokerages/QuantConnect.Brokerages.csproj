@@ -680,6 +680,8 @@
     <Compile Include="Tradier\UserProfile.cs" />
     <Compile Include="Bybit\BybitWebSocketWrapper.cs" />
     <Compile Include="Bybit\BybitSubscriptionManager.cs" />
+    <Compile Include="Bybit\BybitBrokerage.Utility.cs" />
+    <Compile Include="Bybit\Messages.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="InteractiveBrokers\IB-symbol-map.json">

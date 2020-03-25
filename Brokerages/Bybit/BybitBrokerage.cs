@@ -38,11 +38,6 @@ namespace QuantConnect.Brokerages.Bybit
             throw new NotImplementedException();
         }
 
-        public override void OnMessage(object sender, WebSocketMessage e)
-        {
-            throw new NotImplementedException();
-        }
-
         public override bool PlaceOrder(Order order)
         {
             throw new NotImplementedException();
