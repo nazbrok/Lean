@@ -74,6 +74,14 @@ namespace QuantConnect.Brokerages.Bybit
         }
 
 
+        private object GetTypeMessage(JToken token)
+        {
+            if (token == null)
+            {
+                throw new ArgumentNullException(nameof(token));
+            }
+        }
+
         /// <summary>
         /// Implementation of the OnMessage event
         /// </summary>
@@ -111,8 +119,14 @@ namespace QuantConnect.Brokerages.Bybit
                 }
                 else if (token is JObject)
                 {
+                    var test = token.ToObject<Messages.Test>();
 
-                    var raw = token.ToObject<Messages.BaseMessage>();
+                    if (test == null)
+                    {
+                        Log.Trace($"not a Test");
+                    }
+
+                    var raw = token.ToObject<Messages.SubscriptionResponse>();
                     switch (raw.Request.Operation.ToLowerInvariant())
                     {
                         case "auth":
@@ -169,12 +183,12 @@ namespace QuantConnect.Brokerages.Bybit
         /// </summary>
         public void Unsubscribe(IEnumerable<Symbol> symbols)
         {
-            /*  foreach (var symbol in symbols)
-              {
-                  _subscriptionManager.Unsubscribe(symbol);
+            foreach (var symbol in symbols)
+            {
+                _subscriptionManager.Unsubscribe(symbol);
 
-                  Log.Trace($"BybitBrokerage.Unsubscribe(): Sent unsubscribe for {symbol.Value}.");
-              }*/
+                Log.Trace($"BybitBrokerage.Unsubscribe(): Sent unsubscribe for {symbol.Value}.");
+            }
         }
 
         private void SubscribeAuth()
@@ -218,5 +232,15 @@ namespace QuantConnect.Brokerages.Bybit
 
             return hex.ToString();
         }
+    }
+
+    /// <summary>
+    /// Message type
+    /// </summary>
+
+    public enum BybitMessageType
+    {
+        Subscription,
+        Topic,
     }
 }

@@ -190,7 +190,11 @@ namespace QuantConnect.Brokerages
                     return new BitfinexBrokerageModel(accountType);
 
                 case BrokerageName.Bybit:
-                    return new BybitBrokerageModel(accountType);
+                    if (accountType != AccountType.Margin)
+                    {
+                        throw new ArgumentException($"AccountType {accountType} not supported by brokerage {brokerage}");
+                    }
+                    return new BybitBrokerageModel();
 
                 case BrokerageName.GDAX:
                     return new GDAXBrokerageModel(accountType);
