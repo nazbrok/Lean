@@ -9,7 +9,7 @@
   "environment": "backtesting", // "live-paper", "backtesting", "live-interactive", "live-interactive-iqfeed"
 
   // algorithm class selector
-  "algorithm-type-name": "BasicTemplateFrameworkAlgorithm",
+  "algorithm-type-name": "NazbrokAlgorithm",
 
   // Algorithm language selector - options CSharp, Python
   "algorithm-language": "CSharp",
@@ -25,7 +25,7 @@
   "data-folder": "../../../Data/",
 
   // debugging configuration - options for debugging-method LocalCmdLine, VisualStudio, PTVSD, PyCharm
-  "debugging": false,
+  "debugging": true,
   "debugging-method": "LocalCmdline",
 
   // handlers
@@ -51,10 +51,10 @@
 
   // if one uses true in following token, market hours will remain open all hours and all days.
   // if one uses false will make lean operate only during regular market hours.
-  "force-exchange-always-open": false,
+  "force-exchange-always-open": true,
 
   // save list of transactions to the specified csv file
-  "transaction-log": "",
+  "transaction-log": "../../../Nazbrok/transactions.log",
 
   // To get your api access token go to quantconnect.com/account
   "job-user-id": "0",
@@ -178,7 +178,10 @@
     "intrinio-password": "",
 
     "ema-fast": 10,
-    "ema-slow": 20
+    "ema-slow": 20,
+
+    "ticker-symbol": "BTCUSD",
+    "amount-cash":  10000
   },
 
   "environments": {

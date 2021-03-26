@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "QuantConnect.ToolBox": {
+      "commandName": "Project",
+      "commandLineArgs": "--app=bfxdl --tickers=\"BTCUSDT\" --resolution=All --from-date=20210101-00:00:00 --to-date=20210301-00:00:00"
+    }
+  }
+}
