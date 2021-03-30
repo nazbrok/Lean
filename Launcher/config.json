@@ -181,7 +181,13 @@
     "ema-slow": 20,
 
     "ticker-symbol": "BTCUSD",
-    "amount-cash":  10000
+    "amount-cash": 10000,
+
+    "ichimoku-tenkan": 20,
+    "ichimoku-kijun": 30,
+    "ichimoku-senkou-span-a": 120,
+    "ichimoku-senkou-span-b": 120,
+    "ichimoku-chikou-span": 60
   },
 
   "environments": {

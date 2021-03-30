@@ -1,13 +1,12 @@
 ﻿using QuantConnect.Algorithm.Framework.Alphas;
 using QuantConnect.Data;
+using QuantConnect.Data.Market;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Indicators;
 using QuantConnect.Util;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace QuantConnect.Algorithm.CSharp.Nazbrok
 {
@@ -15,7 +14,7 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
     /// Uses Wilder's RSI to create insights. Using default settings, a cross over below 30 or above 70 will
     /// trigger a new insight.
     /// </summary>
-    public class NazbrokAlphaModel : AlphaModel
+    public class NazbrokIchimokuAlphaModel : AlphaModel
     {
         private readonly Dictionary<Symbol, SymbolData> _symbolDataBySymbol = new Dictionary<Symbol, SymbolData>();
 
@@ -29,17 +28,17 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
         private readonly Resolution _resolution;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NazbrokAlphaModel"/> class
+        /// Initializes a new instance of the <see cref="NazbrokIchimokuAlphaModel"/> class
         /// </summary>
         /// <param name="period">The RSI indicator period</param>
         /// <param name="resolution">The resolution of data sent into the RSI indicator</param>
-        public NazbrokAlphaModel(
+        public NazbrokIchimokuAlphaModel(
             int tenkanPeriod = 9, 
             int kijunPeriod = 26, 
             int senkouAPeriod = 26, 
-            int senkouBPeriod= 52, 
-            int senkouADelayPeriod, 
-            int senkouBDelayPeriod, 
+            int senkouBPeriod = 52, 
+            int senkouADelayPeriod = 26, 
+            int senkouBDelayPeriod = 26, 
             Resolution resolution = Resolution.Daily
             )
         {
@@ -49,8 +48,14 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
             _senkouBPeriod = senkouBPeriod;
             _senkouADelayPeriod = senkouADelayPeriod;
             _senkouBDelayPeriod = senkouBDelayPeriod;
-            _resolution = resolution
-            Name = $"{nameof(NazbrokAlphaModel)}({_period},{_resolution})";
+            _resolution = resolution;
+            Name = $"{nameof(NazbrokIchimokuAlphaModel)}({_tenkanPeriod},{_kijunPeriod},{_senkouAPeriod},{_senkouBPeriod},{_senkouADelayPeriod},{_senkouBDelayPeriod},{_resolution})";
+        }
+
+        [Conditional("DEBUG")]
+        private void DebugInfo(QCAlgorithm algorithm, Symbol symbol, TradeBar qb, IchimokuState state)
+        {
+            algorithm.Log($"Time : {qb.Time} Symbol : {symbol.Value} Clound {state.CloudState}");
         }
 
         /// <summary>
@@ -68,25 +73,28 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
                 var symbol = kvp.Key;
                 var ichimoku = kvp.Value.ICHIMOKU;
                 var previousState = kvp.Value.State;
-                var state = GetState(ichimoku, previousState);
-
-                if (state != previousState && ichimoku.IsReady)
+                TradeBar qb = null;
+                if (data.Bars.TryGetValue(symbol, out qb))
                 {
-                    var insightPeriod = _resolution.ToTimeSpan().Multiply(_period);
+                    var state = GetState(ichimoku, previousState, qb);
 
-                    switch (state)
+                    if (ichimoku.IsReady && previousState.CloudState != state.CloudState)
                     {
-                        case State.TrippedLow:
+                        var insightPeriod = _resolution.ToTimeSpan().Multiply(_tenkanPeriod);
+                        if (state.CloudState == IchimokuCloudState.Above)
+                        {
                             insights.Add(Insight.Price(symbol, insightPeriod, InsightDirection.Up));
-                            break;
-
-                        case State.TrippedHigh:
+                            DebugInfo(algorithm, symbol, qb, state);
+                        }
+                        if (state.CloudState == IchimokuCloudState.Under)
+                        {
                             insights.Add(Insight.Price(symbol, insightPeriod, InsightDirection.Down));
-                            break;
+                            DebugInfo(algorithm, symbol, qb, state);
+                        }
                     }
-                }
 
-                kvp.Value.State = state;
+                    kvp.Value.State = state;
+                }
             }
 
             return insights;
@@ -130,7 +138,7 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
             if (addedSymbols.Count > 0)
             {
                 // warmup our indicators by pushing history through the consolidators
-                algorithm.History(addedSymbols, _period, _resolution)
+                algorithm.History(addedSymbols, GetPeriod(), _resolution)
                     .PushThrough(data =>
                     {
                         SymbolData symbolData;
@@ -142,42 +150,41 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
             }
         }
 
+        private int GetPeriod()
+        {
+            return Math.Max(_tenkanPeriod, Math.Max(_kijunPeriod, Math.Max(_senkouADelayPeriod, Math.Max(_senkouBDelayPeriod, Math.Max(_senkouAPeriod, _senkouBPeriod)))));
+        }
+
         /// <summary>
         /// Determines the new state. This is basically cross-over detection logic that
         /// includes considerations for bouncing using the configured bounce tolerance.
         /// </summary>
-        private State GetState(IchimokuKinkoHyo ichimoku, State previous)
+        private IchimokuState GetState(IchimokuKinkoHyo ichimoku, IchimokuState previous, TradeBar data)
         {
-            ichimoku.KijunMaximum
+            var symbol = data.Symbol;
 
-            vwap.Current.
-            if (rsi > 70m)
-            {
-                return State.TrippedHigh;
-            }
+            var state = new IchimokuState();
 
-            if (rsi < 30m)
-            {
-                return State.TrippedLow;
-            }
+            SymbolData symbolData = null;
+            _symbolDataBySymbol.TryGetValue(symbol, out symbolData);
 
-            if (previous == State.TrippedLow)
+            if (symbolData != null)
             {
-                if (rsi > 35m)
+                if (data.Close > symbolData.ICHIMOKU.SenkouA && data.Close > symbolData.ICHIMOKU.SenkouB)
                 {
-                    return State.Middle;
+                    state.CloudState = IchimokuCloudState.Above;
+                }
+                else if (data.Close > symbolData.ICHIMOKU.SenkouA || data.Close > symbolData.ICHIMOKU.SenkouB)
+                {
+                    state.CloudState = IchimokuCloudState.Inside;
+                }
+                else
+                {
+                    state.CloudState = IchimokuCloudState.Under;
                 }
             }
 
-            if (previous == State.TrippedHigh)
-            {
-                if (rsi < 65m)
-                {
-                    return State.Middle;
-                }
-            }
-
-            return previous;
+            return state;
         }
 
         /// <summary>
@@ -186,26 +193,44 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
         private class SymbolData
         {
             public Symbol Symbol { get; }
-            public State State { get; set; }
+            
+            public IchimokuState State { get; set; }
 
             public IchimokuKinkoHyo ICHIMOKU { get; }
 
             public SymbolData(Symbol symbol, IchimokuKinkoHyo ichimoku)
             {
+                State = new IchimokuState();
                 Symbol = symbol;
                 ICHIMOKU = ichimoku;
-                State = State.Middle;
+                State.CloudState = IchimokuCloudState.Inside;
+            }
+        }
+
+        private class IchimokuState
+        {
+            public IchimokuCloudState CloudState { get; set; }
+
+            public IchimokuState()
+            {
+                CloudState = IchimokuCloudState.Inside;
             }
         }
 
         /// <summary>
         /// Defines the state. This is used to prevent signal spamming and aid in bounce detection.
         /// </summary>
-        private enum State
+        private enum IchimokuCloudState
         {
-            TrippedLow,
-            Middle,
-            TrippedHigh
+            Under,
+            
+            Inside,
+
+            Above,
         }
+
+        //private enum Ichimoku
+
+
     }
 }
