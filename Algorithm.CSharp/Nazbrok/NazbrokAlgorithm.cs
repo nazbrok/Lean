@@ -66,7 +66,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetAlpha(new NazbrokIchimokuAlphaModel(_parameters.IchimokuTenkan, _parameters.IchimokuKenjun, _parameters.IchimokuSenkouSpanA, _parameters.IchimokuSenkouSpanB, _parameters.IchimokuChikouSpan, _parameters.IchimokuChikouSpan, UniverseSettings.Resolution));
             SetPortfolioConstruction(new EqualWeightingPortfolioConstructionModel());
             SetExecution(new ImmediateExecutionModel());
-            SetRiskManagement(new TrailingStopRiskManagementModel(0.02m));
+            SetRiskManagement(new TrailingStopRiskManagementModel(0.05m));
         }
 
         private void InitializeBacktesParams()
@@ -77,6 +77,8 @@ namespace QuantConnect.Algorithm.CSharp
             SetEndDate(2021, 2, 28); // Set End Date
 
             SetCash(_parameters.AmountCash);
+
+            SetWarmUp(120);
         }
 
 

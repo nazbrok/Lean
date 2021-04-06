@@ -53,9 +53,9 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
         }
 
         [Conditional("DEBUG")]
-        private void DebugInfo(QCAlgorithm algorithm, Symbol symbol, TradeBar qb, IchimokuState state)
+        private void DebugInfo(QCAlgorithm algorithm, Symbol symbol, TradeBar qb, IchimokuCloudLocation ichimokuLocation)
         {
-            algorithm.Log($"Time : {qb.Time} Symbol : {symbol.Value} Clound {state.CloudState}");
+            algorithm.Log($"Time : {qb.Time} Symbol : {symbol.Value} location : {ichimokuLocation.ToString()}");
         }
 
         /// <summary>
@@ -68,32 +68,41 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
         public override IEnumerable<Insight> Update(QCAlgorithm algorithm, Slice data)
         {
             var insights = new List<Insight>();
+
             foreach (var kvp in _symbolDataBySymbol)
             {
                 var symbol = kvp.Key;
-                var ichimoku = kvp.Value.ICHIMOKU;
-                var previousState = kvp.Value.State;
+                var symbolData = kvp.Value;
+                //var previousState = kvp.Value.State;
                 TradeBar qb = null;
                 if (data.Bars.TryGetValue(symbol, out qb))
                 {
-                    var state = GetState(ichimoku, previousState, qb);
+                    // Update indicator with the latest TradeBar
+                    symbolData.Update(qb);
 
-                    if (ichimoku.IsReady && previousState.CloudState != state.CloudState)
+                    // Determine insight direction
+                    var currentCloudLocation = symbolData.GetCloudLocation();
+                    if (symbolData.PreviousCloudLocation != null)
                     {
-                        var insightPeriod = _resolution.ToTimeSpan().Multiply(_tenkanPeriod);
-                        if (state.CloudState == IchimokuCloudState.Above)
+                        if (symbolData.PreviousCloudLocation != IchimokuCloudLocation.Above &&  currentCloudLocation == IchimokuCloudLocation.Above)
                         {
-                            insights.Add(Insight.Price(symbol, insightPeriod, InsightDirection.Up));
-                            DebugInfo(algorithm, symbol, qb, state);
+                            symbolData.Direction = InsightDirection.Up;
                         }
-                        if (state.CloudState == IchimokuCloudState.Under)
+
+                        if (symbolData.PreviousCloudLocation != IchimokuCloudLocation.Under && currentCloudLocation == IchimokuCloudLocation.Under)
                         {
-                            insights.Add(Insight.Price(symbol, insightPeriod, InsightDirection.Down));
-                            DebugInfo(algorithm, symbol, qb, state);
+                            symbolData.Direction = InsightDirection.Down;
                         }
                     }
 
-                    kvp.Value.State = state;
+                    symbolData.PreviousCloudLocation = currentCloudLocation;
+
+                    // Emit insight
+                    if (symbolData.Direction.HasValue)
+                    {
+                        var insight = Insight.Price(symbolData.Symbol, symbolData.Resolution, 1, symbolData.Direction.Value);
+                        insights.Add(insight);
+                    }
                 }
             }
 
@@ -128,8 +137,7 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
             {
                 if (!_symbolDataBySymbol.ContainsKey(added.Symbol))
                 {
-                    var ichimoku = algorithm.ICHIMOKU(added.Symbol, _tenkanPeriod, _kijunPeriod, _senkouAPeriod, _senkouBPeriod, _senkouADelayPeriod, _senkouBDelayPeriod, _resolution);
-                    var symbolData = new SymbolData(added.Symbol, ichimoku);
+                    var symbolData = new SymbolData(added.Symbol, algorithm, _tenkanPeriod, _kijunPeriod, _senkouAPeriod, _senkouBPeriod, _senkouADelayPeriod, _senkouBDelayPeriod, _resolution);
                     _symbolDataBySymbol[added.Symbol] = symbolData;
                     addedSymbols.Add(symbolData.Symbol);
                 }
@@ -144,7 +152,7 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
                         SymbolData symbolData;
                         if (_symbolDataBySymbol.TryGetValue(data.Symbol, out symbolData))
                         {
-                            symbolData.ICHIMOKU.Update(data.EndTime, data.Value);
+                            symbolData.Update(data);
                         }
                     });
             }
@@ -156,81 +164,78 @@ namespace QuantConnect.Algorithm.CSharp.Nazbrok
         }
 
         /// <summary>
-        /// Determines the new state. This is basically cross-over detection logic that
-        /// includes considerations for bouncing using the configured bounce tolerance.
-        /// </summary>
-        private IchimokuState GetState(IchimokuKinkoHyo ichimoku, IchimokuState previous, TradeBar data)
-        {
-            var symbol = data.Symbol;
-
-            var state = new IchimokuState();
-
-            SymbolData symbolData = null;
-            _symbolDataBySymbol.TryGetValue(symbol, out symbolData);
-
-            if (symbolData != null)
-            {
-                if (data.Close > symbolData.ICHIMOKU.SenkouA && data.Close > symbolData.ICHIMOKU.SenkouB)
-                {
-                    state.CloudState = IchimokuCloudState.Above;
-                }
-                else if (data.Close > symbolData.ICHIMOKU.SenkouA || data.Close > symbolData.ICHIMOKU.SenkouB)
-                {
-                    state.CloudState = IchimokuCloudState.Inside;
-                }
-                else
-                {
-                    state.CloudState = IchimokuCloudState.Under;
-                }
-            }
-
-            return state;
-        }
-
-        /// <summary>
         /// Contains data specific to a symbol required by this model
         /// </summary>
         private class SymbolData
         {
+            #region Properties
+            public Resolution Resolution { get; }
+
             public Symbol Symbol { get; }
-            
-            public IchimokuState State { get; set; }
+
+            public QCAlgorithm Algorithm { get; }
+
+            public IchimokuCloudLocation? PreviousCloudLocation { get; set; }
+
+            public InsightDirection? Direction { get; set; }
 
             public IchimokuKinkoHyo ICHIMOKU { get; }
 
-            public SymbolData(Symbol symbol, IchimokuKinkoHyo ichimoku)
+            #endregion
+
+            public SymbolData(Symbol symbol, QCAlgorithm algorithm, int tenkanPeriod = 9, int kijunPeriod = 26, int senkouAPeriod = 26, int senkouBPeriod = 52, int senkouADelayPeriod = 26, int senkouBDelayPeriod = 26, Resolution resolution = Resolution.Daily)
             {
-                State = new IchimokuState();
                 Symbol = symbol;
-                ICHIMOKU = ichimoku;
-                State.CloudState = IchimokuCloudState.Inside;
+                Algorithm = algorithm;
+                Resolution = resolution;
+                
+                ICHIMOKU = algorithm.ICHIMOKU(symbol, tenkanPeriod, kijunPeriod, senkouAPeriod, senkouBPeriod, senkouADelayPeriod, senkouBDelayPeriod, resolution);
             }
-        }
 
-        private class IchimokuState
-        {
-            public IchimokuCloudState CloudState { get; set; }
-
-            public IchimokuState()
+            public IchimokuCloudLocation GetCloudLocation()
             {
-                CloudState = IchimokuCloudState.Inside;
+                var chikou = ICHIMOKU.Chikou.Current.Value;
+
+                var senkou_span_a = ICHIMOKU.SenkouA.Current.Value;
+                var senkou_span_b = ICHIMOKU.SenkouB.Current.Value;
+                var cloudTop = Math.Max(senkou_span_a, senkou_span_b);
+                var cloudBottom = Math.Min(senkou_span_a, senkou_span_b);
+
+                if (chikou > cloudTop)
+                {
+                    return IchimokuCloudLocation.Above;
+                }
+                else if (chikou < cloudBottom)
+                {
+                    return IchimokuCloudLocation.Under;
+                }
+                else
+                {
+                    return IchimokuCloudLocation.Inside;
+                }
+            }
+
+            public void Update(BaseData data)
+            {
+                if (data == null || data.Symbol != Symbol)
+                {
+                    return;
+                }
+
+                ICHIMOKU.Update(data);
             }
         }
 
         /// <summary>
         /// Defines the state. This is used to prevent signal spamming and aid in bounce detection.
         /// </summary>
-        private enum IchimokuCloudState
+        public enum IchimokuCloudLocation
         {
-            Under,
+            Under = -1,
             
-            Inside,
+            Inside = 0,
 
-            Above,
+            Above = 1,
         }
-
-        //private enum Ichimoku
-
-
     }
 }
